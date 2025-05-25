@@ -1,29 +1,15 @@
 import React from 'react';
 import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
 import {Blog} from '../types';
+import {formatDate, truncateText, getReadingTime} from '../utils/textUtils';
 
 interface BlogCardProps {
   blog: Blog;
   onPress?: () => void;
+  searchQuery?: string;
 }
 
 const BlogCard: React.FC<BlogCardProps> = ({blog, onPress}) => {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const truncateContent = (content: string, maxLength: number = 120) => {
-    if (content.length <= maxLength) {
-      return content;
-    }
-    return content.substring(0, maxLength) + '...';
-  };
-
   return (
     <TouchableOpacity
       style={styles.container}
@@ -47,7 +33,7 @@ const BlogCard: React.FC<BlogCardProps> = ({blog, onPress}) => {
           </Text>
 
           <Text style={styles.description} numberOfLines={3}>
-            {truncateContent(blog.content)}
+            {truncateText(blog.content)}
           </Text>
 
           <View style={styles.tagsContainer}>
@@ -65,6 +51,9 @@ const BlogCard: React.FC<BlogCardProps> = ({blog, onPress}) => {
             </View>
 
             <View style={styles.stats}>
+              <Text style={styles.readingTime}>
+                {getReadingTime(blog.content)}
+              </Text>
               <Text style={styles.views}>{blog.views} views</Text>
             </View>
           </View>
@@ -157,6 +146,12 @@ const styles = StyleSheet.create({
   },
   stats: {
     alignItems: 'flex-end',
+  },
+  readingTime: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginBottom: 2,
+    fontWeight: '500',
   },
   views: {
     fontSize: 12,

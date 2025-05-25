@@ -3,28 +3,40 @@ import {Blog, Pagination} from '../types';
 
 // State interface
 interface BlogState {
-  blogs: Blog[];
+  allBlogs: Blog[]; // All fetched blogs
+  filteredBlogs: Blog[]; // Filtered blogs based on search
   pagination: Pagination | null;
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: string | null;
+  searchQuery: string;
+  hasReachedEnd: boolean;
 }
 
 // Action types
 type BlogAction =
   | {type: 'FETCH_BLOGS_START'}
+  | {type: 'FETCH_MORE_BLOGS_START'}
   | {
       type: 'FETCH_BLOGS_SUCCESS';
-      payload: {blogs: Blog[]; pagination: Pagination};
+      payload: {blogs: Blog[]; pagination: Pagination; isLoadMore?: boolean};
     }
   | {type: 'FETCH_BLOGS_ERROR'; payload: string}
-  | {type: 'CLEAR_ERROR'};
+  | {type: 'CLEAR_ERROR'}
+  | {type: 'SET_SEARCH_QUERY'; payload: string}
+  | {type: 'FILTER_BLOGS'}
+  | {type: 'RESET_BLOGS'};
 
 // Initial state
 const initialState: BlogState = {
-  blogs: [],
+  allBlogs: [],
+  filteredBlogs: [],
   pagination: null,
   isLoading: false,
+  isLoadingMore: false,
   error: null,
+  searchQuery: '',
+  hasReachedEnd: false,
 };
 
 // Reducer
@@ -35,20 +47,87 @@ const blogReducer = (state: BlogState, action: BlogAction): BlogState => {
         ...state,
         isLoading: true,
         error: null,
+        hasReachedEnd: false,
       };
-    case 'FETCH_BLOGS_SUCCESS':
+    case 'FETCH_MORE_BLOGS_START':
+      return {
+        ...state,
+        isLoadingMore: true,
+        error: null,
+      };
+    case 'FETCH_BLOGS_SUCCESS': {
+      const {blogs, pagination, isLoadMore = false} = action.payload;
+      const updatedAllBlogs = isLoadMore
+        ? [...state.allBlogs, ...blogs]
+        : blogs;
+
+      // Filter blogs based on current search query
+      const filteredBlogs = state.searchQuery
+        ? updatedAllBlogs.filter(
+            blog =>
+              blog.title
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()) ||
+              blog.sub_title
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()) ||
+              blog.content
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()),
+          )
+        : updatedAllBlogs;
+
       return {
         ...state,
         isLoading: false,
-        blogs: action.payload.blogs,
-        pagination: action.payload.pagination,
+        isLoadingMore: false,
+        allBlogs: updatedAllBlogs,
+        filteredBlogs,
+        pagination,
         error: null,
+        hasReachedEnd: !pagination.has_next,
       };
+    }
     case 'FETCH_BLOGS_ERROR':
       return {
         ...state,
         isLoading: false,
+        isLoadingMore: false,
         error: action.payload,
+      };
+    case 'SET_SEARCH_QUERY':
+      return {
+        ...state,
+        searchQuery: action.payload,
+      };
+    case 'FILTER_BLOGS': {
+      const filteredBlogs = state.searchQuery
+        ? state.allBlogs.filter(
+            blog =>
+              blog.title
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()) ||
+              blog.sub_title
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()) ||
+              blog.content
+                .toLowerCase()
+                .includes(state.searchQuery.toLowerCase()),
+          )
+        : state.allBlogs;
+
+      return {
+        ...state,
+        filteredBlogs,
+      };
+    }
+    case 'RESET_BLOGS':
+      return {
+        ...state,
+        allBlogs: [],
+        filteredBlogs: [],
+        pagination: null,
+        hasReachedEnd: false,
       };
     case 'CLEAR_ERROR':
       return {

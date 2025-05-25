@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,13 @@ import {
 import {useBlogContext} from '../context/BlogContext';
 import {useBlogActions} from '../hooks/useBlogActions';
 import BlogCard from '../components/BlogCard';
+import SearchBar from '../components/SearchBar';
 import {Blog} from '../types';
 
 const HomeScreen: React.FC = () => {
   const {state} = useBlogContext();
-  const {fetchBlogs, clearError} = useBlogActions();
+  const {fetchBlogs, clearError, setSearchQuery, clearSearch, resetBlogs} =
+    useBlogActions();
 
   useEffect(() => {
     fetchBlogs();
@@ -41,9 +43,40 @@ const HomeScreen: React.FC = () => {
     }
   }, [state.error, clearError, fetchBlogs]);
 
-  const handleRefresh = () => {
-    fetchBlogs();
-  };
+  const handleRefresh = useCallback(() => {
+    resetBlogs();
+    fetchBlogs(1, 10, false);
+  }, [resetBlogs, fetchBlogs]);
+
+  const handleLoadMore = useCallback(() => {
+    if (
+      !state.isLoadingMore &&
+      !state.hasReachedEnd &&
+      state.pagination &&
+      state.pagination.has_next &&
+      !state.searchQuery // Don't load more during search
+    ) {
+      const nextPage = state.pagination.current_page + 1;
+      fetchBlogs(nextPage, 10, true);
+    }
+  }, [
+    state.isLoadingMore,
+    state.hasReachedEnd,
+    state.pagination,
+    state.searchQuery,
+    fetchBlogs,
+  ]);
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+    },
+    [setSearchQuery],
+  );
+
+  const handleClearSearch = useCallback(() => {
+    clearSearch();
+  }, [clearSearch]);
 
   const handleBlogPress = (blog: Blog) => {
     // TODO: Navigate to blog detail screen
@@ -51,7 +84,11 @@ const HomeScreen: React.FC = () => {
   };
 
   const renderBlogItem = ({item}: {item: Blog}) => (
-    <BlogCard blog={item} onPress={() => handleBlogPress(item)} />
+    <BlogCard
+      blog={item}
+      onPress={() => handleBlogPress(item)}
+      searchQuery={state.searchQuery}
+    />
   );
 
   const renderHeader = () => (
@@ -63,20 +100,56 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>No blogs available</Text>
-      <Text style={styles.emptySubtext}>
-        Pull to refresh or try again later
-      </Text>
-    </View>
-  );
+  const renderEmpty = () => {
+    if (state.searchQuery) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No blogs found</Text>
+          <Text style={styles.emptySubtext}>
+            Try adjusting your search terms
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No blogs available</Text>
+        <Text style={styles.emptySubtext}>
+          Pull to refresh or try again later
+        </Text>
+      </View>
+    );
+  };
 
-  if (state.isLoading && state.blogs.length === 0) {
+  const renderFooter = () => {
+    if (state.isLoadingMore) {
+      return (
+        <View style={styles.footerLoading}>
+          <ActivityIndicator size="small" color="#007AFF" />
+          <Text style={styles.footerText}>Loading more...</Text>
+        </View>
+      );
+    }
+    if (state.hasReachedEnd && state.filteredBlogs.length > 0) {
+      return (
+        <View style={styles.footerEnd}>
+          <Text style={styles.footerText}>You've reached the end!</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  if (state.isLoading && state.filteredBlogs.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         {renderHeader()}
+        <SearchBar
+          onSearch={handleSearch}
+          onClear={handleClearSearch}
+          value={state.searchQuery}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Loading blogs...</Text>
@@ -88,12 +161,18 @@ const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      {renderHeader()}
+      <SearchBar
+        onSearch={handleSearch}
+        onClear={handleClearSearch}
+        value={state.searchQuery}
+      />
       <FlatList
-        data={state.blogs}
+        data={state.filteredBlogs}
         renderItem={renderBlogItem}
         keyExtractor={item => item._id}
-        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         refreshControl={
           <RefreshControl
             refreshing={state.isLoading}
@@ -102,6 +181,8 @@ const HomeScreen: React.FC = () => {
             tintColor="#007AFF"
           />
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.contentContainer}
       />
@@ -109,7 +190,9 @@ const HomeScreen: React.FC = () => {
       {state.pagination && (
         <View style={styles.paginationInfo}>
           <Text style={styles.paginationText}>
-            Showing {state.blogs.length} of {state.pagination.total_items} blogs
+            Showing {state.filteredBlogs.length} of{' '}
+            {state.pagination.total_items} blogs
+            {state.searchQuery && ' (filtered)'}
           </Text>
         </View>
       )}
@@ -175,6 +258,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   paginationText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  footerLoading: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  footerEnd: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  footerText: {
+    marginLeft: 8,
     fontSize: 14,
     color: '#666',
   },
