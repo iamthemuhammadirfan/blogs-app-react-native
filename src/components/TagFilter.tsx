@@ -9,17 +9,20 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
+import {TagDetail} from '../types';
 
 interface TagFilterProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
   availableTags: string[];
+  tagDetails?: TagDetail[];
 }
 
 const TagFilter: React.FC<TagFilterProps> = ({
   selectedTags,
   onTagsChange,
   availableTags,
+  tagDetails = [],
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [tempSelectedTags, setTempSelectedTags] =
@@ -65,6 +68,9 @@ const TagFilter: React.FC<TagFilterProps> = ({
 
   const renderTag = ({item}: {item: string}) => {
     const isSelected = tempSelectedTags.includes(item);
+    const tagDetail = tagDetails.find(detail => detail.tag === item);
+    const count = tagDetail ? tagDetail.count : 0;
+
     return (
       <TouchableOpacity
         style={[styles.tagItem, isSelected && styles.selectedTagItem]}
@@ -74,6 +80,12 @@ const TagFilter: React.FC<TagFilterProps> = ({
           <Text style={[styles.tagText, isSelected && styles.selectedTagText]}>
             {item}
           </Text>
+          {count > 0 && (
+            <Text
+              style={[styles.tagCount, isSelected && styles.selectedTagCount]}>
+              ({count})
+            </Text>
+          )}
           {isSelected && (
             <View style={styles.checkmarkContainer}>
               <Text style={styles.checkMark}>✓</Text>
@@ -382,6 +394,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  tagCount: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+    fontWeight: '400',
+  },
+  selectedTagCount: {
+    color: '#fff',
+    fontWeight: '500',
   },
   cancelButton: {
     fontSize: 16,

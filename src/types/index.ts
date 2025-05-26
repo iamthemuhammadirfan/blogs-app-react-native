@@ -39,3 +39,18 @@ export interface BlogsResponse {
   };
   message: string;
 }
+
+export interface TagDetail {
+  tag: string;
+  count: number;
+}
+
+export interface TagsResponse {
+  success: boolean;
+  data: {
+    tags: string[];
+    total: number;
+    tagDetails: TagDetail[];
+  };
+  message: string;
+}

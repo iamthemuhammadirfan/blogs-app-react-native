@@ -22,6 +22,7 @@ const HomeScreen: React.FC = () => {
   const {state} = useBlogContext();
   const {
     fetchBlogs,
+    fetchTags,
     clearError,
     setSearchQuery,
     clearSearch,
@@ -29,12 +30,6 @@ const HomeScreen: React.FC = () => {
     clearAllFilters,
     resetBlogs,
   } = useBlogActions();
-
-  // Extract unique tags from all blogs
-  const availableTags = React.useMemo(() => {
-    const allTags = state.allBlogs.flatMap(blog => blog.tags);
-    return [...new Set(allTags)].sort();
-  }, [state.allBlogs]);
 
   const initialFetchRef = useRef(false);
 
@@ -44,8 +39,9 @@ const HomeScreen: React.FC = () => {
     if (!initialFetchRef.current) {
       initialFetchRef.current = true;
       fetchBlogs();
+      fetchTags(); // Fetch tags on initial mount
     }
-  }, [fetchBlogs]);
+  }, [fetchBlogs, fetchTags]);
 
   useEffect(() => {
     if (state.error) {
@@ -191,7 +187,8 @@ const HomeScreen: React.FC = () => {
         <TagFilter
           selectedTags={state.selectedTags}
           onTagsChange={handleTagsChange}
-          availableTags={availableTags}
+          availableTags={state.availableTags}
+          tagDetails={state.tagDetails}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -213,7 +210,8 @@ const HomeScreen: React.FC = () => {
       <TagFilter
         selectedTags={state.selectedTags}
         onTagsChange={handleTagsChange}
-        availableTags={availableTags}
+        availableTags={state.availableTags}
+        tagDetails={state.tagDetails}
       />
       <FlatList
         data={state.filteredBlogs}

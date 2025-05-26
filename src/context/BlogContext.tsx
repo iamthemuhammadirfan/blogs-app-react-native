@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useReducer, ReactNode} from 'react';
-import {Blog, Pagination} from '../types';
+import {Blog, Pagination, TagDetail} from '../types';
 
 // State interface
 interface BlogState {
@@ -12,6 +12,9 @@ interface BlogState {
   searchQuery: string;
   selectedTags: string[]; // Tags selected for filtering
   hasReachedEnd: boolean;
+  availableTags: string[]; // All available tags from API
+  tagDetails: TagDetail[]; // Tags with counts
+  isLoadingTags: boolean;
 }
 
 // Action types
@@ -27,7 +30,13 @@ type BlogAction =
   | {type: 'SET_SEARCH_QUERY'; payload: string}
   | {type: 'SET_SELECTED_TAGS'; payload: string[]}
   | {type: 'FILTER_BLOGS'}
-  | {type: 'RESET_BLOGS'};
+  | {type: 'RESET_BLOGS'}
+  | {type: 'FETCH_TAGS_START'}
+  | {
+      type: 'FETCH_TAGS_SUCCESS';
+      payload: {tags: string[]; tagDetails: TagDetail[]};
+    }
+  | {type: 'FETCH_TAGS_ERROR'; payload: string};
 
 // Initial state
 const initialState: BlogState = {
@@ -40,6 +49,9 @@ const initialState: BlogState = {
   searchQuery: '',
   selectedTags: [],
   hasReachedEnd: false,
+  availableTags: [],
+  tagDetails: [],
+  isLoadingTags: false,
 };
 
 // Reducer
@@ -140,6 +152,26 @@ const blogReducer = (state: BlogState, action: BlogAction): BlogState => {
         pagination: null,
         selectedTags: [],
         hasReachedEnd: false,
+      };
+    case 'FETCH_TAGS_START':
+      return {
+        ...state,
+        isLoadingTags: true,
+        error: null,
+      };
+    case 'FETCH_TAGS_SUCCESS':
+      return {
+        ...state,
+        isLoadingTags: false,
+        availableTags: action.payload.tags,
+        tagDetails: action.payload.tagDetails,
+        error: null,
+      };
+    case 'FETCH_TAGS_ERROR':
+      return {
+        ...state,
+        isLoadingTags: false,
+        error: action.payload,
       };
     case 'CLEAR_ERROR':
       return {

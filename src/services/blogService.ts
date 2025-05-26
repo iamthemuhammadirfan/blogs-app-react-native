@@ -1,4 +1,4 @@
-import {BlogsResponse} from '../types';
+import {BlogsResponse, TagsResponse} from '../types';
 
 const BASE_URL = 'http://localhost:3000/api';
 
@@ -26,6 +26,23 @@ export const blogService = {
       return data;
     } catch (error) {
       console.error('Error fetching blogs:', error);
+      throw error;
+    }
+  },
+
+  async getTags(): Promise<TagsResponse> {
+    try {
+      const url = `${BASE_URL}/blogs/tags`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: TagsResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching tags:', error);
       throw error;
     }
   },

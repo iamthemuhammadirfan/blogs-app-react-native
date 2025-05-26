@@ -140,8 +140,39 @@ export const useBlogActions = () => {
     }
   }, [dispatch]);
 
+  const fetchTags = useCallback(async () => {
+    try {
+      dispatch({type: 'FETCH_TAGS_START'});
+      const response = await blogService.getTags();
+
+      if (response.success) {
+        dispatch({
+          type: 'FETCH_TAGS_SUCCESS',
+          payload: {
+            tags: response.data.tags,
+            tagDetails: response.data.tagDetails,
+          },
+        });
+      } else {
+        dispatch({
+          type: 'FETCH_TAGS_ERROR',
+          payload: response.message || 'Failed to fetch tags',
+        });
+      }
+    } catch (error) {
+      dispatch({
+        type: 'FETCH_TAGS_ERROR',
+        payload:
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred',
+      });
+    }
+  }, [dispatch]);
+
   return {
     fetchBlogs,
+    fetchTags,
     setSearchQuery,
     clearSearch,
     setSelectedTags,
