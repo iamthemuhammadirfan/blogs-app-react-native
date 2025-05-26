@@ -3,14 +3,18 @@
  */
 
 export const highlightText = (text: string, searchTerm: string): string => {
-  if (!searchTerm.trim()) return text;
+  if (!searchTerm.trim()) {
+    return text;
+  }
 
   const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
   return text.replace(regex, '**$1**'); // Using markdown-style highlighting
 };
 
 export const truncateText = (text: string, maxLength: number = 120): string => {
-  if (text.length <= maxLength) return text;
+  if (text.length <= maxLength) {
+    return text;
+  }
   return text.substring(0, maxLength).trim() + '...';
 };
 

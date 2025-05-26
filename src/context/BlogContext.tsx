@@ -10,6 +10,7 @@ interface BlogState {
   isLoadingMore: boolean;
   error: string | null;
   searchQuery: string;
+  selectedTags: string[]; // Tags selected for filtering
   hasReachedEnd: boolean;
 }
 
@@ -24,6 +25,7 @@ type BlogAction =
   | {type: 'FETCH_BLOGS_ERROR'; payload: string}
   | {type: 'CLEAR_ERROR'}
   | {type: 'SET_SEARCH_QUERY'; payload: string}
+  | {type: 'SET_SELECTED_TAGS'; payload: string[]}
   | {type: 'FILTER_BLOGS'}
   | {type: 'RESET_BLOGS'};
 
@@ -36,6 +38,7 @@ const initialState: BlogState = {
   isLoadingMore: false,
   error: null,
   searchQuery: '',
+  selectedTags: [],
   hasReachedEnd: false,
 };
 
@@ -61,7 +64,8 @@ const blogReducer = (state: BlogState, action: BlogAction): BlogState => {
         ? [...state.allBlogs, ...blogs]
         : blogs;
 
-      // Filter blogs based on current search query
+      // When using server-side tag filtering, we only apply search filter on frontend
+      // The API already filtered by tags
       const filteredBlogs = state.searchQuery
         ? updatedAllBlogs.filter(
             blog =>
@@ -100,7 +104,14 @@ const blogReducer = (state: BlogState, action: BlogAction): BlogState => {
         ...state,
         searchQuery: action.payload,
       };
+    case 'SET_SELECTED_TAGS':
+      return {
+        ...state,
+        selectedTags: action.payload,
+      };
     case 'FILTER_BLOGS': {
+      // Only apply search query filter on frontend
+      // Tag filtering is handled server-side
       const filteredBlogs = state.searchQuery
         ? state.allBlogs.filter(
             blog =>
@@ -127,6 +138,7 @@ const blogReducer = (state: BlogState, action: BlogAction): BlogState => {
         allBlogs: [],
         filteredBlogs: [],
         pagination: null,
+        selectedTags: [],
         hasReachedEnd: false,
       };
     case 'CLEAR_ERROR':

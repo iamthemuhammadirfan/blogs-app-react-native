@@ -1,4 +1,4 @@
-import React, {useEffect, useCallback} from 'react';
+import React, {useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,42 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import {useBlogContext} from '../context/BlogContext';
 import {useBlogActions} from '../hooks/useBlogActions';
 import BlogCard from '../components/BlogCard';
 import SearchBar from '../components/SearchBar';
+import TagFilter from '../components/TagFilter';
 import {Blog} from '../types';
 
 const HomeScreen: React.FC = () => {
   const {state} = useBlogContext();
-  const {fetchBlogs, clearError, setSearchQuery, clearSearch, resetBlogs} =
-    useBlogActions();
+  const {
+    fetchBlogs,
+    clearError,
+    setSearchQuery,
+    clearSearch,
+    setSelectedTags,
+    clearAllFilters,
+    resetBlogs,
+  } = useBlogActions();
 
+  // Extract unique tags from all blogs
+  const availableTags = React.useMemo(() => {
+    const allTags = state.allBlogs.flatMap(blog => blog.tags);
+    return [...new Set(allTags)].sort();
+  }, [state.allBlogs]);
+
+  const initialFetchRef = useRef(false);
+
+  // Only fetch blogs on initial mount, not when tags change
   useEffect(() => {
-    fetchBlogs();
+    // Only fetch if we haven't done the initial fetch yet
+    if (!initialFetchRef.current) {
+      initialFetchRef.current = true;
+      fetchBlogs();
+    }
   }, [fetchBlogs]);
 
   useEffect(() => {
@@ -54,7 +76,7 @@ const HomeScreen: React.FC = () => {
       !state.hasReachedEnd &&
       state.pagination &&
       state.pagination.has_next &&
-      !state.searchQuery // Don't load more during search
+      !state.searchQuery // Only prevent load more during search, not tag filtering
     ) {
       const nextPage = state.pagination.current_page + 1;
       fetchBlogs(nextPage, 10, true);
@@ -77,6 +99,17 @@ const HomeScreen: React.FC = () => {
   const handleClearSearch = useCallback(() => {
     clearSearch();
   }, [clearSearch]);
+
+  const handleTagsChange = useCallback(
+    (tags: string[]) => {
+      setSelectedTags(tags); // This already handles fetching in useBlogActions
+    },
+    [setSelectedTags],
+  );
+
+  const handleClearAllFilters = useCallback(() => {
+    clearAllFilters(); // This now handles the API call internally
+  }, [clearAllFilters]);
 
   const handleBlogPress = (blog: Blog) => {
     // TODO: Navigate to blog detail screen
@@ -101,13 +134,18 @@ const HomeScreen: React.FC = () => {
   );
 
   const renderEmpty = () => {
-    if (state.searchQuery) {
+    if (state.searchQuery || state.selectedTags.length > 0) {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No blogs found</Text>
           <Text style={styles.emptySubtext}>
-            Try adjusting your search terms
+            Try adjusting your search terms or selected tags
           </Text>
+          <TouchableOpacity
+            style={styles.clearFiltersButton}
+            onPress={handleClearAllFilters}>
+            <Text style={styles.clearFiltersButtonText}>Clear All Filters</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -150,6 +188,11 @@ const HomeScreen: React.FC = () => {
           onClear={handleClearSearch}
           value={state.searchQuery}
         />
+        <TagFilter
+          selectedTags={state.selectedTags}
+          onTagsChange={handleTagsChange}
+          availableTags={availableTags}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Loading blogs...</Text>
@@ -166,6 +209,11 @@ const HomeScreen: React.FC = () => {
         onSearch={handleSearch}
         onClear={handleClearSearch}
         value={state.searchQuery}
+      />
+      <TagFilter
+        selectedTags={state.selectedTags}
+        onTagsChange={handleTagsChange}
+        availableTags={availableTags}
       />
       <FlatList
         data={state.filteredBlogs}
@@ -192,7 +240,8 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.paginationText}>
             Showing {state.filteredBlogs.length} of{' '}
             {state.pagination.total_items} blogs
-            {state.searchQuery && ' (filtered)'}
+            {(state.searchQuery || state.selectedTags.length > 0) &&
+              ' (filtered)'}
           </Text>
         </View>
       )}
@@ -249,6 +298,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  clearFiltersButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  clearFiltersButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
   paginationInfo: {
     padding: 16,
