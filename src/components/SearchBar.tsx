@@ -20,7 +20,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Search blogs...',
   value,
 }) => {
-  const [localQuery, setLocalQuery] = useState(value);
+  const [localQuery, setLocalQuery] = useState(value || '');
 
   const handleSearch = () => {
     onSearch(localQuery.trim());
@@ -53,7 +53,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           returnKeyType="search"
           onSubmitEditing={handleSearch}
         />
-        {localQuery.length > 0 && (
+        {(localQuery?.length || 0) > 0 && (
           <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
             <Text style={styles.clearButtonText}>✕</Text>
           </TouchableOpacity>

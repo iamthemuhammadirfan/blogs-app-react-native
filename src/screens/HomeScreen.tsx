@@ -214,6 +214,7 @@ const HomeScreen: React.FC = () => {
         tagDetails={state.tagDetails}
       />
       <FlatList
+        testID="blogs-flatlist"
         data={state.filteredBlogs}
         renderItem={renderBlogItem}
         keyExtractor={item => item._id}
